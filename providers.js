@@ -18,9 +18,18 @@ export async function saveImageConfig(url,passcode){
   if(target.protocol!=='https:'||!target.hostname.endsWith('.workers.dev')||target.username||target.password||target.search||target.hash)throw new Error('Enter the exact HTTPS workers.dev address, without a path or parameters.');
   if(passcode.length<24)throw new Error('Use the same image passcode as the Worker, at least 24 characters.');
   await configOp('readwrite',store=>store.put({id:imageConfigId,url:target.origin,passcode}));
-  registerProvider('image',{generate:cloudflareImage});
+  registerProvider('image',{generate:cloudflareImage});registerProvider('voice',{generate:cloudflareVoice});
 }
-export async function clearImageConfig(){await configOp('readwrite',store=>store.delete(imageConfigId));if(await getGeminiKey())registerProvider('image',{generate:geminiImage});else adapters.delete('image')}
+export async function clearImageConfig(){await configOp('readwrite',store=>store.delete(imageConfigId));adapters.delete('voice');if(await getGeminiKey())registerProvider('image',{generate:geminiImage});else adapters.delete('image')}
+async function cloudflareVoice({text}){
+ const row=await configOp('readonly',store=>store.get(imageConfigId));if(!row?.url||!row.passcode)throw new Error('Free voice provider not configured');
+ const response=await fetch(`${row.url}/speech`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${row.passcode}`},body:JSON.stringify({text})});
+ let result;try{result=await response.json()}catch{throw new Error(`Voice service returned HTTP ${response.status}`)}
+ if(!response.ok)throw new Error(result.error||`Voice service returned HTTP ${response.status}`);
+ if(!result.audio||result.mime!=='audio/mpeg')throw new Error('Voice service returned no MP3 audio');
+ const bytes=Uint8Array.from(atob(result.audio),character=>character.charCodeAt(0));
+ return {blob:new Blob([bytes],{type:'audio/mpeg'}),model:result.model||'Cloudflare Workers AI'};
+}
 async function cloudflareImage({prompt,onProgress}){
   const row=await configOp('readonly',store=>store.get(imageConfigId));if(!row?.url||!row.passcode)throw new Error('Free image provider not configured');
   onProgress?.('Generating image with Cloudflare free allowance…');
@@ -31,7 +40,7 @@ async function cloudflareImage({prompt,onProgress}){
   const bytes=Uint8Array.from(atob(result.image),character=>character.charCodeAt(0));
   return {blob:new Blob([bytes],{type:'image/png'}),mime:'image/png',model:result.model||'Cloudflare Workers AI'};
 }
-export async function initializeProviders(){if(await getGeminiKey())registerProvider('text',{generate:geminiText});if(await getImageConfig())registerProvider('image',{generate:cloudflareImage});else if(await getGeminiKey())registerProvider('image',{generate:geminiImage})}
+export async function initializeProviders(){if(await getGeminiKey())registerProvider('text',{generate:geminiText});if(await getImageConfig()){registerProvider('image',{generate:cloudflareImage});registerProvider('voice',{generate:cloudflareVoice})}else if(await getGeminiKey())registerProvider('image',{generate:geminiImage})}
 const api='https://generativelanguage.googleapis.com/v1beta/';
 const textPreference=['gemini-3.8-flash','gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3.1-flash-lite'];
 const imagePreference=['gemini-3.1-flash-image','gemini-3.1-flash-lite-image'];
