@@ -1,12 +1,37 @@
 {
-  "id":"/cartoonai-generator/",
-  "name":"DoodleDreams",
-  "short_name":"DoodleDreams",
-  "description":"Create and organise cartoon video projects on your phone.",
-  "start_url":"/cartoonai-generator/",
-  "scope":"/cartoonai-generator/",
-  "display":"standalone",
-  "background_color":"#fff9ed",
-  "theme_color":"#6454db",
-  "icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]
+  "id": "/cartoonai-generator/",
+  "name": "Doodle Dreams",
+  "short_name": "Doodle Dreams",
+  "description": "Create and organise cartoon video projects on your phone.",
+  "start_url": "/cartoonai-generator/",
+  "scope": "/cartoonai-generator/",
+  "display": "standalone",
+  "background_color": "#202126",
+  "theme_color": "#27282e",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }
