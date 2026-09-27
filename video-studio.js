@@ -3,7 +3,7 @@ import {allRecords,storeRecord} from './storage.js';
 import {generate} from './providers.js?v=6';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let micStream,voiceRecorder,voiceChunks=[];
-const mime=()=>['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp8,opus','video/webm'].find(x=>MediaRecorder.isTypeSupported(x));
+const mime=()=>['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/webm;codecs=vp8,opus','video/webm'].find(x=>MediaRecorder.isTypeSupported(x));
 export async function showVideoStudio(main,id){
  const project=(await allRecords('projects')).find(x=>x.id===id);if(!project)return false;
  const images=project.images||[];const selected=(project.videoScenes||[]).filter(x=>images.some(i=>i.id===x.id));
