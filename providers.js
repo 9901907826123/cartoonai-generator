@@ -26,18 +26,43 @@ async function availableModels(key){
   }while(pageToken&&models.length<5000);
   return models.filter(model=>model.supportedGenerationMethods?.includes('generateContent'));
 }
-async function chooseModel(key,kind){
+async function candidateModels(key,kind){
   const models=await availableModels(key),preferred=kind==='image'?imagePreference:textPreference;
-  const selected=preferred.find(id=>models.some(m=>m.name===`models/${id}`));
-  if(!selected)throw new Error(`No supported ${kind} generation model was listed for this key. Check your Google AI Studio access.`);
-  return selected;
+  const candidates=preferred.filter(id=>models.some(m=>m.name===`models/${id}`));
+  if(!candidates.length)throw new Error(`No supported ${kind} generation model was listed for this key. Check your Google AI Studio access.`);
+  return candidates;
 }
-export async function testGeminiKey(){const key=await getGeminiKey();if(!key)throw new Error('AI provider not configured');return `models/${await chooseModel(key,'text')}`}
-async function geminiText({prompt}){
+export async function testGeminiKey(){const key=await getGeminiKey();if(!key)throw new Error('AI provider not configured');return `models/${(await candidateModels(key,'text'))[0]}`}
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+function transient(response,payload){
+  // Quota exhaustion and bad requests need a user action, not more calls.
+  return [500,502,503,504].includes(response.status)&&payload?.error?.status!=='RESOURCE_EXHAUSTED';
+}
+async function generateWithFallback(key,kind,body,onProgress){
+  const models=await candidateModels(key,kind);
+  // Two tries on the first model, then one on each of the next two listed models.
+  // At most four calls; do not retry credentials, permission or quota errors.
+  let attempts=0,lastError;
+  for(const model of models.slice(0,3)){
+    const repeats=attempts===0?2:1;
+    for(let tryNumber=0;tryNumber<repeats&&attempts<4;tryNumber++){
+      if(attempts>0){onProgress?.(`Gemini is busy, retrying with models/${model}…`);await pause(Math.min(1000*2**(attempts-1),4000))}
+      else onProgress?.(`Generating with models/${model}…`);
+      attempts++;
+      const response=await fetch(`${api}models/${model}:generateContent`,{
+        method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)
+      });
+      let data;try{data=await response.json()}catch{data={}};
+      if(response.ok)return {data,model};
+      lastError=new Error(messageFrom(response,data));
+      if(!transient(response,data))throw lastError;
+    }
+  }
+  throw new Error(`Gemini models were busy after ${attempts} attempts. ${lastError?.message||'Try again later.'}`);
+}
+async function geminiText({prompt,onProgress}){
   const key=await getGeminiKey();if(!key)throw new Error('AI provider not configured');
-  const model=await chooseModel(key,'text');
-  const response=await fetch(`${api}models/${model}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json'}})});
-  const data=await response.json();if(!response.ok)throw new Error(messageFrom(response,data));
+  const {data}=await generateWithFallback(key,'text',{contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json'}},onProgress);
   const text=data.candidates?.[0]?.content?.parts?.filter(part=>!part.thought).map(part=>part.text||'').join('');
   if(!text)throw new Error('Gemini returned no story text. Nothing was saved.');
   try{return JSON.parse(text)}catch{throw new Error('Gemini returned a story that could not be read as JSON. Nothing was saved.')}
@@ -45,14 +70,11 @@ async function geminiText({prompt}){
 
 // Gemini image generation is a separate model from the text-key test.
 // A valid text key does not prove this account has image generation access.
-export async function geminiImage({prompt}){
+export async function geminiImage({prompt,onProgress}){
   const key=await getGeminiKey();if(!key)throw new Error('AI provider not configured');
-  const model=await chooseModel(key,'image');
-  const response=await fetch(`${api}models/${model}:generateContent`,{
-    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
-    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseModalities:['TEXT','IMAGE']}})
-  });
-  const data=await response.json();if(!response.ok)throw new Error(messageFrom(response,data));
+  const {data,model}=await generateWithFallback(key,'image',{
+    contents:[{parts:[{text:prompt}]}],generationConfig:{responseModalities:['TEXT','IMAGE']}
+  },onProgress);
   const part=data.candidates?.[0]?.content?.parts?.find(part=>part.inlineData?.data);
   if(!part)throw new Error('Gemini returned no image. Nothing was saved.');
   const mime=part.inlineData.mimeType||'image/png';
