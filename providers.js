@@ -54,6 +54,10 @@ async function generateWithFallback(key,kind,body,onProgress){
       });
       let data;try{data=await response.json()}catch{data={}};
       if(response.ok)return {data,model};
+      if(kind==='image'&&response.status===429&&/limit:\s*0/i.test(messageFrom(response,data))){
+        throw new Error("Your Gemini plan doesn't include image generation for this model. Enable billing for your API project in Google AI Studio, then try again. No image was saved.");
+      }
+      if(response.status===429)throw new Error('Gemini image or text quota is exhausted for this key. Check the project rate limits and billing in Google AI Studio, then try later.');
       lastError=new Error(messageFrom(response,data));
       if(!transient(response,data))throw lastError;
     }
