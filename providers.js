@@ -9,9 +9,29 @@ const keyDb='cartoonai-private-config';
 function configDb(){return new Promise((resolve,reject)=>{let r=indexedDB.open(keyDb,1);r.onupgradeneeded=()=>r.result.createObjectStore('settings',{keyPath:'id'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
 async function configOp(mode,fn){let db=await configDb();return new Promise((resolve,reject)=>{let tx=db.transaction('settings',mode),req=fn(tx.objectStore('settings'));req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);tx.oncomplete=()=>db.close()})}
 export async function getGeminiKey(){return (await configOp('readonly',store=>store.get(settingsId)))?.key||''}
-export async function saveGeminiKey(key){if(!key.trim())throw new Error('Enter a key first');await configOp('readwrite',store=>store.put({id:settingsId,key:key.trim()}));registerProvider('text',{generate:geminiText});registerProvider('image',{generate:geminiImage});return true}
-export async function clearGeminiKey(){await configOp('readwrite',store=>store.delete(settingsId));adapters.delete('text');adapters.delete('image')}
-export async function initializeProviders(){if(await getGeminiKey()){registerProvider('text',{generate:geminiText});registerProvider('image',{generate:geminiImage})}}
+export async function saveGeminiKey(key){if(!key.trim())throw new Error('Enter a key first');await configOp('readwrite',store=>store.put({id:settingsId,key:key.trim()}));registerProvider('text',{generate:geminiText});if(!await getImageConfig())registerProvider('image',{generate:geminiImage});return true}
+export async function clearGeminiKey(){await configOp('readwrite',store=>store.delete(settingsId));adapters.delete('text');if(!await getImageConfig())adapters.delete('image')}
+const imageConfigId='cloudflare-images';
+export async function getImageConfig(){const row=await configOp('readonly',store=>store.get(imageConfigId));return row?{url:row.url,configured:!!row.passcode}:null}
+export async function saveImageConfig(url,passcode){
+  const target=new URL(url.trim());
+  if(target.protocol!=='https:'||!target.hostname.endsWith('.workers.dev')||target.username||target.password||target.search||target.hash)throw new Error('Enter the exact HTTPS workers.dev address, without a path or parameters.');
+  if(passcode.length<24)throw new Error('Use the same image passcode as the Worker, at least 24 characters.');
+  await configOp('readwrite',store=>store.put({id:imageConfigId,url:target.origin,passcode}));
+  registerProvider('image',{generate:cloudflareImage});
+}
+export async function clearImageConfig(){await configOp('readwrite',store=>store.delete(imageConfigId));if(await getGeminiKey())registerProvider('image',{generate:geminiImage});else adapters.delete('image')}
+async function cloudflareImage({prompt,onProgress}){
+  const row=await configOp('readonly',store=>store.get(imageConfigId));if(!row?.url||!row.passcode)throw new Error('Free image provider not configured');
+  onProgress?.('Generating image with Cloudflare free allowance…');
+  const response=await fetch(`${row.url}/image`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${row.passcode}`},body:JSON.stringify({prompt})});
+  let result;try{result=await response.json()}catch{throw new Error(`Image service returned HTTP ${response.status}`)}
+  if(!response.ok)throw new Error(result.error||`Image service returned HTTP ${response.status}`);
+  if(!result.image||result.mime!=='image/png')throw new Error('Image service returned no PNG image');
+  const bytes=Uint8Array.from(atob(result.image),character=>character.charCodeAt(0));
+  return {blob:new Blob([bytes],{type:'image/png'}),mime:'image/png',model:result.model||'Cloudflare Workers AI'};
+}
+export async function initializeProviders(){if(await getGeminiKey())registerProvider('text',{generate:geminiText});if(await getImageConfig())registerProvider('image',{generate:cloudflareImage});else if(await getGeminiKey())registerProvider('image',{generate:geminiImage})}
 const api='https://generativelanguage.googleapis.com/v1beta/';
 const textPreference=['gemini-3.8-flash','gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3.1-flash-lite'];
 const imagePreference=['gemini-3.1-flash-image','gemini-3.1-flash-lite-image'];
