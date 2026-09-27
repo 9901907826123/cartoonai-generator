@@ -1,5 +1,5 @@
-const CACHE = 'cartoonai-shell-v12';
-const SHELL = ['./', './index.html', './styles.css?v=9', './app.js?v=10', './storage.js', './providers.js?v=3', './manifest.json', './editor-icon-192.png', './editor-icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png'];
+const CACHE = 'cartoonai-shell-v13';
+const SHELL = ['./', './index.html', './styles.css?v=9', './app.js?v=11', './storage.js', './three-d.js?v=1', './providers.js?v=4', './manifest.json', './editor-icon-192.png', './editor-icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', event => {
