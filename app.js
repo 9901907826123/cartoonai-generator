@@ -1,7 +1,7 @@
 import { allRecords, storeRecord, removeRecord } from './storage.js';
 import { providerKinds, providerStatus, generate, saveGeminiKey, clearGeminiKey, initializeProviders, getGeminiKey, testGeminiKey, getImageConfig, saveImageConfig, clearImageConfig } from './providers.js?v=6';
 import {stylePresets,lightingPresets,cameraPresets,threeDPrompt} from './three-d.js?v=1';
-import {showVideoStudio} from './video-studio.js?v=3';
+import {showVideoStudio} from './video-studio.js?v=4';
 const main = document.querySelector('#main');
 const tabs = [...document.querySelectorAll('.bottom button')];
 let current = 'home';
