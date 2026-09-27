@@ -2,3 +2,5 @@
 .timeline-dock .dock-head{gap:8px;align-items:center}.timeline-dock .dock-head span{font-size:9px;text-align:right;letter-spacing:.025em;line-height:1.3}.dock-head{min-height:34px}.dock-head span{font-weight:500;color:#9e9dab;letter-spacing:.02em}
 
 .key-status{border:1px solid #5a5369;background:#36313f;color:#e2dded;padding:10px 12px;min-height:40px;font-size:12px;line-height:1.5;margin:12px 0 0;border-radius:5px}.key-status.success{border-color:#679c8a;color:#b8ecd4;background:#23352e}.key-status.error{border-color:#be6e70;color:#ffd0d1;background:#3b292e}
+
+.image-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.image-gallery figure{margin:0}.image-gallery img,.generated-image{display:block;width:100%;height:auto;max-height:520px;object-fit:contain;background:#17181d;border:1px solid #444650;border-radius:4px}.image-gallery figcaption{margin:9px 0;color:#dedbe5;font-size:12px;overflow-wrap:anywhere}.image-gallery small{display:block;color:#9f9da9;margin-bottom:10px}
