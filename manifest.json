@@ -1,7 +1,7 @@
 {
   "id":"/cartoonai-generator/",
-  "name":"CartoonAI Generator",
-  "short_name":"CartoonAI",
+  "name":"DoodleDreams",
+  "short_name":"DoodleDreams",
   "description":"Create and organise cartoon video projects on your phone.",
   "start_url":"/cartoonai-generator/",
   "scope":"/cartoonai-generator/",
