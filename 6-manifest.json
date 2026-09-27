@@ -1,0 +1,12 @@
+{
+  "id":"/cartoonai-generator/",
+  "name":"CartoonAI Generator",
+  "short_name":"CartoonAI",
+  "description":"Create and organise cartoon video projects on your phone.",
+  "start_url":"/cartoonai-generator/",
+  "scope":"/cartoonai-generator/",
+  "display":"standalone",
+  "background_color":"#fff9ed",
+  "theme_color":"#6454db",
+  "icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]
+}
